@@ -5,6 +5,7 @@ import (
 	"5e/utils"
 	"fmt"
 	"strconv"
+	"time"
 )
 
 func main() {
@@ -36,12 +37,14 @@ func main() {
 
 		}
 	}
+	//utils.Setacw("")
 	for i, v := range array {
-		fmt.Println(i, v.MatchCode)
+
 		utils.Setacw("")
 		//result := utils.Getacw("13D8E4E464E15558AFDE808F185EE64F7E4B5D93")
 		//fmt.Println(result)
 		url = "https://arena.5eplay.com/data/match/" + v.MatchCode
+
 		a, _ := utils.SendGetRequest(url)
 		b := utils.MatchArg1String(string(a))
 		//fmt.Println(string(a))
@@ -52,6 +55,7 @@ func main() {
 
 		var aa []config.Match
 		cc := utils.ExtractTextBetween(string(a), "name tleft ban-bg", "icon_wrap")
+		fmt.Println(i, url, len(cc))
 		for i, v := range cc {
 			aa = append(aa, config.Match{Data: v})
 			aa[i].Match()
@@ -96,6 +100,8 @@ func main() {
 				}
 			}
 		}
+		time.Sleep(time.Second * 5)
+
 	}
 
 	fmt.Println(acco.Location, acco.Nameid, acco.Name, acco.Teammate_ids, ii)
