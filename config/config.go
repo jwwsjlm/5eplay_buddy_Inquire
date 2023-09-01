@@ -48,21 +48,46 @@ type AData struct {
 }
 
 type Match struct {
-	Data     string
-	Name     string
-	Teammate string
-	Avatar   string
-	Up       int
-	Nameid   string
+	Data        string
+	Name        string
+	Teammate    string
+	Avatar      string
+	Up          int
+	Nameid      string
+	TeammateIds []FriendInformation
 }
 type Acco struct {
-	Match        []Match
-	Nameid       string
-	Name         string
-	Location     int
-	Teammate     string
-	Teammate_ids []string
-	MatchCode    string
+	Match       []Match
+	Nameid      string
+	Name        string
+	Location    int
+	Teammate    string
+	TeammateIds []FriendInformation
+	MatchCode   string
+}
+type FriendInformation struct {
+	Name  string
+	Match string
+}
+
+func (this *Acco) Append(T FriendInformation) {
+
+	for _, value := range this.TeammateIds {
+		if value == T {
+			return
+		}
+	}
+	this.TeammateIds = append(this.TeammateIds, T)
+
+	//var b int
+	//for _, v := range this.TeammateIds {
+	//	if v.Match != T.Match {
+	//		b = b + 1
+	//	}
+	//}
+	//if v.Match != T.Match {
+	//	this.TeammateIds = append(this.TeammateIds, T)
+	//}
 }
 
 func (this *Match) Match() {
@@ -73,6 +98,7 @@ func (this *Match) Match() {
 	this.Teammate, _ = utils.ExtractTextBetweenone(this.Data, "class=\"formation", "icon-titletip")
 	this.Avatar, _ = utils.ExtractTextBetweenone(this.Data, "avatar\" src=\"", "\"")
 	this.Nameid, _ = utils.ExtractTextBetweenone(this.Data, "https://arena.5eplay.com/data/player/", "\"")
+
 	//}
 }
 
