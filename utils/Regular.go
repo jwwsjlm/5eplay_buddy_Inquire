@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"regexp"
 	"strings"
 )
@@ -43,16 +44,17 @@ func ExtractTextBetween(str, start, end string) []string {
 
 	return result
 }
-func ExtractTextBetweenone(str, start, end string) (string, bool) {
+func GetTextBetween(str, start, end string) (string, error) {
 	startIndex := strings.Index(str, start)
+
 	if startIndex == -1 {
-		return "", false
+		return "", errors.New("未找到文本")
 	}
 
 	endIndex := strings.Index(str[startIndex+len(start):], end)
 	if endIndex == -1 {
-		return "", false
+		return "", errors.New("未找到文本")
 	}
 
-	return str[startIndex+len(start) : startIndex+len(start)+endIndex], true
+	return str[startIndex+len(start) : startIndex+len(start)+endIndex], nil
 }

@@ -12,6 +12,7 @@ func SendGetRequest(url string) ([]byte, error) {
 	//url := "https://arena.5eplay.com/data/match/g151-n-20230830180505294466823"
 
 	client := http.Client{}
+
 	req, err := http.NewRequest("GET", url, nil)
 	req.AddCookie(&acw_sc__v2)
 	res, err := client.Do(req)

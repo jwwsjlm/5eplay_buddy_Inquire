@@ -3,37 +3,46 @@ package main
 import (
 	"5e/config"
 	"5e/utils"
+	"flag"
 	"fmt"
 	"strconv"
 	"time"
 )
 
 func main() {
+	var url string
+	var ti int
+	flag.StringVar(&url, "url", "https://arena.5eplay.com/data/player/9548486whkirl", "个人简介地址")
+	flag.IntVar(&ti, "time", 1, "每次获取延时单位为秒,默认一秒")
+	flag.Parse()
+	fmt.Println(url, ti)
+
+	var info = config.PlayerInfo{}
 	i := 0
 
-	url := "https://arena.5eplay.com/data/player/10304198uihisj"
+	//url := "https://arena.5eplay.com/data/player/9548486whkirl"
 	request, err := utils.SendGetRequest(url)
-	n := utils.ExtractTextBetween(string(request), "\"username-tooltips\">", "</span>")
-	ni := utils.ExtractTextBetween(string(request), "_g_player_domain ='", "'")
-	if len(n) == 0 || len(ni) == 0 {
+
+	err = utils.ParseToPlayerList(request, &info)
+	if err != nil {
+		fmt.Println(err)
 		return
 	}
-	fmt.Println(n, ni)
 
-	url = "https://arena.5eplay.com/api/data/match_list/" + ni[0] + "?page=1&yyyy=2023&match_type="
-	array := []config.AData{}
+	fmt.Println(info.Name, info.PlayerID, info.AvatarURL)
 
-	acco := config.Acco{}
+	url = "https://arena.5eplay.com/api/data/match_list/" + info.PlayerID + "?page=1&yyyy=2023&match_type="
+	var array []config.AData
+	//var acco []config.CurrentGamePlayersArray
+
 	for {
 		i++
-		url = "https://arena.5eplay.com/api/data/match_list/" + ni[0] + "?page=" + strconv.Itoa(i) + "&yyyy=2023&match_type="
+		url = "https://arena.5eplay.com/api/data/match_list/" + info.PlayerID + "?page=" + strconv.Itoa(i) + "&yyyy=2023&match_type="
 		request, err = utils.SendGetRequest(url)
-
 		if err != nil {
 
 			return
 		}
-
 		d, err := config.Deserialize(request)
 		if err != nil {
 			fmt.Println("json解析失败", err)
@@ -45,52 +54,44 @@ func main() {
 			array = append(array, d.Data...)
 		}
 	}
-	//utils.Setacw("")
+	acco := config.CurrentGamePlayersArray{}
+	fmt.Printf("当前玩家总局数为:%d,玩家名字为:%s,玩家个人地址为:%s\n", len(array), info.Name, info.ProfileURL)
 	for i, v := range array {
 
-		utils.Setacw("")
-		//result := utils.Getacw("13D8E4E464E15558AFDE808F185EE64F7E4B5D93")
-		//fmt.Println(result)
 		url = "https://arena.5eplay.com/data/match/" + v.MatchCode
-
-		//a, _ := utils.SendGetRequest(url)
-		//b := utils.MatchArg1String(string(a))
-		////fmt.Println(string(a))
-		//acw := utils.Getacw(b[1])
-		//utils.Setacw(acw)
-
 		a, _ := utils.SendGetRequest(url)
-
-		var aa []config.Match
+		var aa []config.CurrentGamePlayers
 		cc := utils.ExtractTextBetween(string(a), "name tleft ban-bg", "icon_wrap")
-		fmt.Println(i, url, len(cc))
-		for i, v := range cc {
-			aa = append(aa, config.Match{Data: v})
-			aa[i].Match()
-			acco.Match = append(acco.Match, config.Match{Data: v})
+		for i, vv := range cc {
+			cgp := config.CurrentGamePlayers{Data: vv}
+			utils.OrganizePlayerInfo(vv, &cgp)
+
+			//aa = append(aa, config.CurrentGamePlayers{Data: vv})
+			aa = append(aa, cgp)
+			//aa[i].Match()
+
+			//cgp.TeammateIds = append(cgp.TeammateIds)
+			acco.Match = append(acco.Match, config.CurrentGamePlayers{Data: vv})
 			if i < 5 {
-				aa[i].Up = 0
+				cgp.Up = 0
 			} else {
-				aa[i].Up = 1
+				cgp.Up = 1
 			}
-			if aa[i].Name == n[0] {
+
+			if cgp.Name == info.Name {
 				acco.Location = i
-				acco.Name = aa[i].Name
-				acco.Nameid = aa[i].Nameid
-				acco.Teammate = aa[i].Teammate
+				acco.Name = cgp.Name
+				acco.Nameid = cgp.Nameid
+				acco.Teammate = cgp.Teammate
+				acco.RecordURL = url
 			}
-			fmt.Println(aa[i].Name, aa[i].Avatar, aa[i].Teammate, aa[i].Nameid, aa[i].Up)
 		}
-		//fmt.Println(acco.Name, acco.Teammate, "本人id")
+
 		if acco.Location < 5 {
 			for i, v := range aa {
 				if i < 5 {
-					//fmt.Println(v.Name, "----", acco.Teammate, v.Teammate, "----", v.Name == ii, acco.Teammate == v.Teammate, acco.Teammate == v.Teammate && v.Name != ii)
-
-					if acco.Teammate == v.Teammate && v.Name != n[0] && acco.Teammate != "" {
+					if acco.Teammate == v.Teammate && v.Name != info.Name && acco.Teammate != "" {
 						acco.Append(config.FriendInformation{Name: v.Name, Match: "https://arena.5eplay.com/data/player/" + v.Nameid})
-						//acco.TeammateIds = append(acco.TeammateIds, config.FriendInformation{Name: v.Name, Match: "https://arena.5eplay.com/data/player/" + v.Nameid})
-						//fmt.Println(acco.Name, v.Name)
 					}
 
 				}
@@ -98,21 +99,13 @@ func main() {
 		} else {
 			for i, v := range aa {
 				if i > 5 {
-
-					if acco.Teammate == v.Teammate && v.Name != n[0] && acco.Teammate != "" {
+					if acco.Teammate == v.Teammate && v.Name != info.Name && acco.Teammate != "" {
 						acco.Append(config.FriendInformation{Name: v.Name, Match: "https://arena.5eplay.com/data/player/" + v.Nameid})
-						//acco.TeammateIds = append(acco.TeammateIds, config.FriendInformation{Name: v.Name, Match: "https://arena.5eplay.com/data/player/" + v.Nameid})
-						//fmt.Println(acco.Name, acco.Teammate, "----", v.Name, v.Teammate)
-						//fmt.Println(acco.Name, v.Name)
 					}
-
 				}
 			}
 		}
-		time.Sleep(time.Second * 2)
-		fmt.Println(acco.Location, acco.Nameid, acco.Name, acco.TeammateIds, n)
+		time.Sleep(time.Second * time.Duration(ti))
+		fmt.Printf("玩家姓名:%s,当前玩家的开黑好友为:%v,本次查询局数为%d,一共有%d\n", acco.Name, acco.TeammateIds, i, len(array))
 	}
-
-	//fmt.Println(acco.Location, acco.Nameid, acco.Name, acco.TeammateIds, ii)
-
 }
