@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<meta charset="UTF-8">
+<head>
+    <title>显示JSON数据示例</title>
+    <style>
+        .container {
+            margin: 20px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .input-container {
+            margin-bottom: 10px;
+        }
+        .input-container input {
+            width: 200px;
+            padding: 5px;
+        }
+        .input-container button {
+            padding: 5px 10px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>显示JSON数据示例</h2>
+    <div class="input-container">
+        <input type="text" id="inputData" placeholder="输入数据">
+        <button onclick="submitData()">提交</button>
+    </div>
+    <table id="myTable">
+        <thead>
+        <tr>
+            <th>队友姓名</th>
+            <th>比赛链接</th>
+            <th>战绩链接</th>
+        </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    function submitData() {
+        var inputData = document.getElementById("inputData").value;
+
+        // 使用 Fetch API 将用户输入的数据提交给Gin
+        fetch("/process", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ data: inputData })
+        })
+            .then(response => response.json())
+            .then(data => {
+                // 清空表格
+                document.querySelector("#myTable tbody").innerHTML = "";
+
+                // 遍历返回的数据并将其添加到表格中
+                data.teammate_ids.forEach(teammate => {
+                    var row = document.createElement("tr");
+
+                    var nameCell = document.createElement("td");
+                    nameCell.textContent = teammate.name;
+                    row.appendChild(nameCell);
+
+                    var matchCell = document.createElement("td");
+                    var matchLink = document.createElement("a");
+                    matchLink.href = teammate.match;
+                    matchLink.textContent = "比赛链接";
+                    matchCell.appendChild(matchLink);
+                    row.appendChild(matchCell);
+
+                    var recordCell = document.createElement("td");
+                    teammate.record_url.forEach(url => {
+                        var recordLink = document.createElement("a");
+                        recordLink.href = url;
+                        recordLink.textContent = url;
+                        recordCell.appendChild(recordLink);
+                        recordCell.appendChild(document.createElement("br"));
+                    });
+                    row.appendChild(recordCell);
+
+                    document.querySelector("#myTable tbody").appendChild(row);
+                });
+            })
+            .catch(error => {
+                console.error("Error:", error);
+            });
+    }
+</script>
+</body>
+</html>

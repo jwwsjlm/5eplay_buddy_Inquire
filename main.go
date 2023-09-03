@@ -3,19 +3,27 @@ package main
 import (
 	"5e/config"
 	"5e/utils"
-	"flag"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/gin-gonic/gin"
+	"os/exec"
+	"runtime"
 	"strconv"
 	"time"
 )
 
-func main() {
-	var url string
-	var ti int
-	flag.StringVar(&url, "url", "https://arena.5eplay.com/data/player/9548486whkirl", "个人简介地址")
-	flag.IntVar(&ti, "time", 1, "每次获取延时单位为秒,默认一秒")
-	flag.Parse()
-	fmt.Println(url, ti)
+type InputData struct {
+	InputText string `json:"inputText"`
+}
+
+type OutputData struct {
+	Result string `json:"result"`
+}
+
+var ti int
+
+func FriendQuery(url string) string {
 
 	var info = config.PlayerInfo{}
 	i := 0
@@ -26,7 +34,7 @@ func main() {
 	err = utils.ParseToPlayerList(request, &info)
 	if err != nil {
 		fmt.Println(err)
-		return
+		return ""
 	}
 
 	fmt.Println(info.Name, info.PlayerID, info.AvatarURL)
@@ -41,12 +49,12 @@ func main() {
 		request, err = utils.SendGetRequest(url)
 		if err != nil {
 
-			return
+			return ""
 		}
 		d, err := config.Deserialize(request)
 		if err != nil {
 			fmt.Println("json解析失败", err)
-			return
+			return ""
 		}
 		if d.Success == false {
 			break
@@ -56,7 +64,7 @@ func main() {
 	}
 	acco := config.CurrentGamePlayersArray{}
 	fmt.Printf("当前玩家总局数为:%d,玩家名字为:%s,玩家个人地址为:%s\n", len(array), info.Name, info.ProfileURL)
-	for i, v := range array {
+	for _, v := range array {
 
 		url = "https://arena.5eplay.com/data/match/" + v.MatchCode
 		a, _ := utils.SendGetRequest(url)
@@ -91,7 +99,10 @@ func main() {
 			for i, v := range aa {
 				if i < 5 {
 					if acco.Teammate == v.Teammate && v.Name != info.Name && acco.Teammate != "" {
+
+						//acco.AddMatchRecord(config.FriendInformation{RecordURL: url})
 						acco.Append(config.FriendInformation{Name: v.Name, Match: "https://arena.5eplay.com/data/player/" + v.Nameid})
+						acco.AddMatchRecords(config.FriendInformation{Name: v.Name, RecordURL: []string{url}})
 					}
 
 				}
@@ -100,12 +111,70 @@ func main() {
 			for i, v := range aa {
 				if i > 5 {
 					if acco.Teammate == v.Teammate && v.Name != info.Name && acco.Teammate != "" {
+						//acco.TeammateIds = append(acco.TeammateIds, config.FriendInformation{Name: v.Name, RecordURL: url})
+						//acco.AddMatchRecord(config.FriendInformation{RecordURL: url})
+
 						acco.Append(config.FriendInformation{Name: v.Name, Match: "https://arena.5eplay.com/data/player/" + v.Nameid})
+						acco.AddMatchRecords(config.FriendInformation{Name: v.Name, RecordURL: []string{url}})
 					}
 				}
 			}
 		}
 		time.Sleep(time.Second * time.Duration(ti))
-		fmt.Printf("玩家姓名:%s,当前玩家的开黑好友为:%v,本次查询局数为%d,一共有%d\n", acco.Name, acco.TeammateIds, i, len(array))
+
+		//fmt.Printf("玩家姓名:%s,当前玩家的开黑好友为:%v,本次查询局数为%d,一共有%d\n", acco.Name, acco.TeammateIds, i, len(array), string(mjson))
 	}
+	mjson, _ := json.Marshal(acco)
+	fmt.Println(i, string(mjson))
+	return string(mjson)
+}
+func GinFriendQuery(c *gin.Context) {
+	//body, _ := io.ReadAll(c.Request.Body)
+	//fmt.Println(string(body))
+	var req config.GinRequestParams
+	err := c.Bind(&req)
+	fmt.Println("data为", req.Data)
+
+	if err != nil {
+		c.Error(errors.New("传递的数据错误2"))
+
+		return
+	}
+
+	data := FriendQuery(req.Data)
+
+	c.String(200, data)
+}
+func main() {
+	var cmd *exec.Cmd
+	if runtime.GOOS == "windows" {
+		cmd = exec.Command("cmd", "/c", "start", "http://127.0.0.1:8199/")
+	} else if runtime.GOOS == "darwin" {
+		cmd = exec.Command("open", "http://127.0.0.1:8199/")
+	} else {
+		cmd = exec.Command("xdg-open", "http://127.0.0.1:8199/")
+	}
+	//var url string
+	//
+	//url = "https://arena.5eplay.com/data/player/14101939b0wwhm"
+	//flag.StringVar(&url, "url", url, "个人简介地址")
+	//flag.IntVar(&ti, "time", 1, "每次获取延时单位为秒,默认一秒")
+	//flag.Parse()
+	//fmt.Println(url, ti)
+	//
+	//FriendQuery(url)
+	//return
+	router := gin.Default()
+
+	// 静态文件路由，用于加载 HTML 文件
+	router.StaticFile("/", "./html/index.html")
+
+	// 处理函数，接收 POST 请求并处理数据
+	router.POST("/process", GinFriendQuery)
+	err := cmd.Run()
+	if err != nil {
+		fmt.Println("打开网页时发生错误:", err)
+	}
+	router.Run(":8199")
+
 }

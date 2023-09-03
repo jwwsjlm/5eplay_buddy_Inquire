@@ -53,34 +53,51 @@ type PlayerInfo struct {
 	FriendInfo []FriendInformation //好友列表
 }
 type CurrentGamePlayers struct {
-	Data        string
-	Name        string
-	Teammate    string
-	Avatar      string
-	Up          int
-	Nameid      string
-	TeammateIds []FriendInformation
+	Data        string              `json:"data"`
+	Name        string              `json:"name"`
+	Teammate    string              `json:"teammate"`
+	Avatar      string              `json:"avatar"`
+	Up          int                 `json:"up"`
+	Nameid      string              `json:"nameid"`
+	TeammateIds []FriendInformation `json:"teammate_ids"`
 }
 type CurrentGamePlayersArray struct {
-	Match       []CurrentGamePlayers
-	Nameid      string
-	Name        string
-	Location    int
-	Teammate    string
-	TeammateIds []FriendInformation
-	MatchCode   string
-	RecordURL   string
+	Match       []CurrentGamePlayers `json:"-"`
+	Nameid      string               `json:"nameid"`
+	Name        string               `json:"name"`
+	Location    int                  `json:"-"`
+	Teammate    string               `json:"-"`
+	TeammateIds []FriendInformation  `json:"teammate_ids"`
+	MatchCode   string               `json:"-"`
+	RecordURL   string               `json:"-"`
 }
 type FriendInformation struct {
-	Name      string
-	Match     string
-	RecordURL string
+	Name      string   `json:"name"`
+	Match     string   `json:"match"`
+	RecordURL []string `json:"record_url"`
+}
+type GinRequestParams struct {
+	Data string `json:"data"`
+}
+
+func (t *CurrentGamePlayersArray) AddMatchRecord(matchRecord FriendInformation) {
+	t.TeammateIds = append(t.TeammateIds, matchRecord)
+}
+
+func (t *CurrentGamePlayersArray) AddMatchRecords(matchRecord FriendInformation) {
+
+	for i, v := range t.TeammateIds {
+		if v.Name == matchRecord.Name {
+			t.TeammateIds[i].RecordURL = append(v.RecordURL, matchRecord.RecordURL...)
+		}
+	}
+
 }
 
 func (this *CurrentGamePlayersArray) Append(T FriendInformation) {
 
 	for _, value := range this.TeammateIds {
-		if value == T {
+		if value.Name == T.Name {
 			return
 		}
 	}
