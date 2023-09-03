@@ -122,7 +122,7 @@ func FriendQuery(url string) string {
 		}
 		time.Sleep(time.Second * time.Duration(ti))
 
-		//fmt.Printf("玩家姓名:%s,当前玩家的开黑好友为:%v,本次查询局数为%d,一共有%d\n", acco.Name, acco.TeammateIds, i, len(array), string(mjson))
+		fmt.Printf("玩家姓名:%s,当前玩家的开黑好友为:%v,本次查询局数为%d,一共有%d\n", acco.Name, acco.TeammateIds, i, len(array))
 	}
 	mjson, _ := json.Marshal(acco)
 	fmt.Println(i, string(mjson))
